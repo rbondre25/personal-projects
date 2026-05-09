@@ -1,0 +1,1298 @@
+/* ───────── tokens: soft, silly, not "card blocks" ───────── */
+:root {
+  --bg: #f6f0ff;
+  --bg2: #fff5f0;
+  --blob1: rgba(255, 154, 158, 0.35);
+  --blob2: rgba(168, 230, 207, 0.4);
+  --blob3: rgba(186, 200, 255, 0.45);
+
+  --ink: #1e1b2e;
+  --ink-soft: #3d3754;
+  --ink-muted: #6b6478;
+
+  --accent: #e85d75;
+  --accent-deep: #c73e54;
+  --sun: #ffc857;
+  --mint: #7ecfc0;
+  --lilac: #b8a9ff;
+
+  /* opaque-ish surface — no backdrop-filter (huge perf win) */
+  --surface: #fdf9ff;
+  --surface-soft: #fffaf6;
+  --shadow-soft: 0 6px 20px rgba(30, 27, 46, 0.08);
+  --shadow-lift: 0 12px 28px rgba(30, 27, 46, 0.1);
+
+  --vbar-w: 92px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+}
+
+html,
+body {
+  height: 100%;
+  overflow: hidden; /* stage system controls scroll */
+}
+
+body {
+  font-family: "Nunito", system-ui, sans-serif;
+  color: var(--ink);
+  /* simple gradient — no fixed attachment, no multi-layer radial blobs */
+  background: linear-gradient(165deg, var(--bg) 0%, var(--bg2) 100%);
+}
+
+#physics {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 1;
+  cursor: grab;
+}
+
+#physics:active {
+  cursor: grabbing;
+}
+
+/* ───────── vertical toolbar (left edge, always visible) ───────── */
+.vtoolbar {
+  position: fixed;
+  left: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 6;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 8px;
+  background: var(--surface);
+  border-radius: 24px;
+  box-shadow: var(--shadow-lift);
+  pointer-events: auto;
+}
+
+.vtool {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  width: 64px;
+  padding: 8px 4px;
+  border: none;
+  background: rgba(255, 255, 255, 0.85);
+  border-radius: 16px;
+  cursor: pointer;
+  font-family: "Nunito", sans-serif;
+  font-weight: 700;
+  color: var(--ink);
+  transition: transform 0.15s ease, background 0.2s ease,
+    box-shadow 0.2s ease;
+  box-shadow: 0 2px 8px rgba(30, 27, 46, 0.06);
+}
+
+.vtool:hover {
+  transform: translateY(-2px) scale(1.04);
+  background: #fff;
+  box-shadow: var(--shadow-lift);
+}
+
+.vtool:active {
+  transform: translateY(0) scale(0.98);
+}
+
+.vtool.is-active {
+  background: linear-gradient(135deg, var(--accent), #ff8fa3);
+  color: #fff;
+  box-shadow: 0 4px 16px rgba(232, 93, 117, 0.35);
+}
+
+.vtool__emoji {
+  font-size: 1.4rem;
+  line-height: 1;
+}
+
+.vtool__label {
+  font-size: 0.62rem;
+  letter-spacing: 0.04em;
+  text-transform: lowercase;
+}
+
+.vtool--ghost {
+  background: transparent;
+  box-shadow: none;
+  color: var(--ink-muted);
+  border: 2px dashed rgba(107, 100, 120, 0.35);
+  margin-top: 2px;
+}
+
+.vtool--ghost:hover {
+  background: rgba(255, 255, 255, 0.55);
+  color: var(--accent-deep);
+}
+
+/* ───────── stage system ───────── */
+.stages {
+  position: fixed;
+  inset: 0;
+  z-index: 3;
+  pointer-events: none;
+}
+
+.stage {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 32px 100px calc(var(--vbar-w) + 24px);
+  opacity: 0;
+  visibility: hidden;
+  transform: scale(0.96);
+  transition: opacity 0.28s ease, transform 0.32s ease,
+    visibility 0s linear 0.32s;
+  pointer-events: none;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.stage.is-active {
+  opacity: 1;
+  visibility: visible;
+  transform: scale(1);
+  transition: opacity 0.28s ease, transform 0.32s ease, visibility 0s linear 0s;
+  pointer-events: auto;
+}
+
+.stage.is-collapsing {
+  opacity: 0;
+  transform: scale(0.85);
+  transition: opacity 0.25s ease, transform 0.25s ease;
+  pointer-events: none;
+}
+
+/* hero "drop everything" exit — text is falling via JS,
+   so the stage itself stays still and instant-hides at the end */
+.stage.is-falling {
+  pointer-events: none;
+  transition: none;
+}
+
+/* a per-character span created by the JS splitter — sits in line
+   until the physics loop starts moving it via inline transform */
+.fall-char {
+  display: inline-block;
+  will-change: transform;
+}
+
+/* pause every animation on inactive stages — huge cpu win */
+.stage:not(.is-active),
+.stage:not(.is-active) * {
+  animation-play-state: paused !important;
+}
+
+.stage__inner {
+  width: 100%;
+  max-width: 720px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  pointer-events: none;
+}
+
+.stage__inner > * {
+  pointer-events: auto;
+}
+
+/* ───────── hero ───────── */
+.hero {
+  width: 100%;
+  text-align: center;
+  pointer-events: none;
+}
+
+.hero > * {
+  pointer-events: auto;
+}
+
+.eyebrow {
+  font-family: "Nunito", sans-serif;
+  font-weight: 800;
+  font-size: 0.78rem;
+  letter-spacing: 0.06em;
+  color: var(--accent-deep);
+  margin: 0 0 20px;
+  padding: 0.35em 0.9em;
+  display: inline-block;
+  background: rgba(255, 255, 255, 0.85);
+  border-radius: 999px;
+  box-shadow: var(--shadow-soft);
+}
+
+.title {
+  font-family: "Fredoka", sans-serif;
+  font-weight: 700;
+  font-size: clamp(2.5rem, 9vw, 4.6rem);
+  line-height: 1.05;
+  letter-spacing: -0.02em;
+  margin: 0;
+  color: var(--ink);
+}
+
+.title .line {
+  display: block;
+}
+
+.title-gap {
+  display: inline-block;
+  width: 0.5em;
+}
+
+.title .line--happy .bounce {
+  animation: rise 0.4s cubic-bezier(0.2, 0.75, 0.2, 1) forwards;
+  animation-delay: calc(var(--i) * 0.035s);
+}
+
+.title .script {
+  font-family: "Nunito", sans-serif;
+  font-style: italic;
+  font-weight: 700;
+  font-size: 0.55em;
+  margin-top: 6px;
+  color: var(--ink-soft);
+}
+
+.script-in {
+  display: inline-block;
+  margin-right: 0.25em;
+  opacity: 0;
+  transform: translateY(14px);
+  animation: script-in 0.4s cubic-bezier(0.2, 0.8, 0.2, 1) 0.32s forwards;
+}
+
+.title .script .name {
+  opacity: 0;
+  transform: translateY(18px) scale(0.94);
+  animation: name-pop 0.45s cubic-bezier(0.34, 1.35, 0.32, 1) 0.45s forwards;
+}
+
+@keyframes script-in {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes name-pop {
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.title .name {
+  color: var(--accent);
+  font-style: italic;
+  font-weight: 800;
+  display: inline-block;
+  position: relative;
+  padding: 0 0.04em;
+}
+
+.title .name::after {
+  content: "";
+  position: absolute;
+  left: 4%;
+  right: 4%;
+  bottom: 0.02em;
+  height: 3px;
+  background: linear-gradient(90deg, var(--sun), var(--mint));
+  border-radius: 3px;
+  transform-origin: left;
+  animation: rule-in 0.5s ease 0.45s backwards;
+}
+
+@keyframes rule-in {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+
+.bounce {
+  display: inline-block;
+  opacity: 0;
+  animation: rise 0.4s cubic-bezier(0.2, 0.75, 0.2, 1) forwards;
+  animation-delay: calc(var(--i) * 0.035s);
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(26px) rotate(-2deg);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) rotate(0);
+  }
+}
+
+.lede {
+  font-family: "Nunito", sans-serif;
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: var(--ink-soft);
+  max-width: 540px;
+  margin: 22px auto 4px;
+  line-height: 1.55;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.lede-line {
+  display: block;
+  opacity: 0;
+  transform: translateY(10px);
+  animation: lede-in 0.4s ease forwards;
+}
+
+.lede-a {
+  animation-delay: 0.5s;
+}
+
+.lede-b {
+  animation-delay: 0.65s;
+}
+
+.lede-c {
+  animation-delay: 0.8s;
+  margin-top: 4px;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.lede-line.lede-c {
+  animation: lede-in 0.4s ease 0.8s forwards;
+}
+
+.lede-em {
+  font-style: italic;
+  color: var(--accent-deep);
+  font-weight: 800;
+}
+
+.lede-tag {
+  color: var(--accent);
+  font-weight: 900;
+}
+
+.lede-tag--eng {
+  color: #5a4fcf;
+}
+
+.lede-comma {
+  font-weight: 700;
+  color: var(--ink-muted);
+}
+
+@keyframes lede-in {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ───────── cake stage ───────── */
+.cake-card {
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  padding: 32px 26px 26px;
+  max-width: 540px;
+  width: 100%;
+  text-align: center;
+  box-shadow: none;
+}
+
+.cake-card h2 {
+  font-family: "Fredoka", sans-serif;
+  font-weight: 600;
+  font-size: 1.75rem;
+  margin: 0 0 8px;
+  color: var(--accent-deep);
+}
+
+.cake-hint {
+  margin: 0 0 24px;
+  color: var(--ink-muted);
+  font-size: 0.95rem;
+  font-weight: 600;
+  line-height: 1.45;
+  font-family: "Nunito", sans-serif;
+}
+
+.cake-hint .unc {
+  display: inline-block;
+  font-weight: 800;
+  font-style: italic;
+  color: var(--accent);
+}
+
+.cake-stage {
+  position: relative;
+  height: 360px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+
+.cake {
+  position: relative;
+  width: 280px;
+  height: 320px;
+  margin: 0 auto;
+}
+
+/* digit candles container — sits on top tier */
+.candles--digits {
+  position: absolute;
+  bottom: 188px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: auto;
+  display: flex;
+  gap: 18px;
+  align-items: flex-end;
+  z-index: 5;
+}
+
+.digit-candle {
+  position: relative;
+  width: 56px;
+  height: 96px;
+  padding: 0;
+  border: none;
+  background: linear-gradient(180deg, #ff9aab 0%, #e85d75 60%, #c73e54 100%);
+  border-radius: 14px 14px 6px 6px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow:
+    inset 0 -8px 0 rgba(0, 0, 0, 0.12),
+    0 8px 22px rgba(232, 93, 117, 0.4);
+  transition: transform 0.15s ease, box-shadow 0.2s ease;
+}
+
+.digit-candle:nth-child(2) {
+  background: linear-gradient(180deg, #c8b8ff 0%, #b8a9ff 60%, #8b7ce8 100%);
+  box-shadow:
+    inset 0 -8px 0 rgba(0, 0, 0, 0.12),
+    0 8px 22px rgba(139, 124, 232, 0.4);
+}
+
+.digit-candle:hover {
+  transform: translateY(-4px);
+}
+
+.digit-candle:focus-visible {
+  outline: 3px solid var(--sun);
+  outline-offset: 4px;
+}
+
+.digit-number {
+  font-family: "Fredoka", sans-serif;
+  font-weight: 700;
+  font-size: 2.4rem;
+  color: #fff9ee;
+  line-height: 1;
+  text-shadow: 0 2px 0 rgba(0, 0, 0, 0.12);
+  pointer-events: none;
+}
+
+.digit-candle.out {
+  opacity: 0.6;
+  box-shadow:
+    inset 0 -8px 0 rgba(0, 0, 0, 0.18),
+    0 4px 10px rgba(30, 27, 46, 0.15);
+}
+
+.digit-candle.out .digit-number {
+  opacity: 0.55;
+}
+
+/* flame for digit candles — cheap, no shadow filter, slow flicker */
+.flame.flame--big {
+  position: absolute;
+  top: -22px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 14px;
+  height: 24px;
+  background: radial-gradient(
+    ellipse at 50% 70%,
+    #fff5b0 0%,
+    #ffc857 35%,
+    #ff8a3d 70%,
+    rgba(255, 90, 90, 0) 100%
+  );
+  border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;
+  box-shadow: 0 0 8px rgba(255, 200, 80, 0.6);
+  animation: flicker 1.2s ease-in-out infinite alternate;
+  pointer-events: none;
+}
+
+@keyframes flicker {
+  0% {
+    transform: translateX(-50%) scale(1);
+    opacity: 0.95;
+  }
+  100% {
+    transform: translateX(-50%) scale(1.08, 1.1);
+    opacity: 1;
+  }
+}
+
+.digit-candle.out .flame.flame--big {
+  animation: smoke 1.2s ease-out forwards;
+}
+
+@keyframes smoke {
+  0% {
+    background: #bbb;
+    filter: blur(2px);
+    opacity: 0.6;
+  }
+  100% {
+    transform: translate(-50%, -36px) scale(1.6);
+    opacity: 0;
+  }
+}
+
+/* cake tiers */
+.cake-top {
+  position: absolute;
+  bottom: 130px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 200px;
+  height: 60px;
+  background: linear-gradient(180deg, #ff9aab 0%, #e85d75 100%);
+  border-radius: 12px;
+  box-shadow: inset 0 -6px 0 rgba(0, 0, 0, 0.08);
+}
+
+.cake-frosting {
+  position: absolute;
+  bottom: 122px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 210px;
+  height: 18px;
+  background: #fff;
+  border-radius: 50%;
+  box-shadow: 0 4px 0 rgba(232, 93, 117, 0.25);
+}
+
+.cake-frosting::before,
+.cake-frosting::after {
+  content: "";
+  position: absolute;
+  bottom: -8px;
+  width: 30px;
+  height: 18px;
+  background: #fff;
+  border-radius: 0 0 50% 50%;
+}
+
+.cake-frosting::before {
+  left: 30px;
+}
+
+.cake-frosting::after {
+  right: 30px;
+  width: 40px;
+}
+
+.cake-mid {
+  position: absolute;
+  bottom: 70px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 250px;
+  height: 60px;
+  background: linear-gradient(180deg, #fff9f5 0%, #ffe5ec 100%);
+  border-radius: 12px;
+  box-shadow: inset 0 -6px 0 rgba(0, 0, 0, 0.05);
+}
+
+.cake-mid::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image:
+    radial-gradient(circle, var(--accent) 1.5px, transparent 2px),
+    radial-gradient(circle, var(--lilac) 1.5px, transparent 2px),
+    radial-gradient(circle, var(--sun) 1.5px, transparent 2px),
+    radial-gradient(circle, var(--mint) 1.5px, transparent 2px);
+  background-size: 28px 28px, 24px 24px, 32px 32px, 26px 26px;
+  background-position: 6px 14px, 14px 28px, 18px 10px, 10px 36px;
+  opacity: 0.65;
+  border-radius: 12px;
+}
+
+.cake-bot {
+  position: absolute;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 260px;
+  height: 50px;
+  background: linear-gradient(180deg, #4a4458 0%, #2e2a3d 100%);
+  border-radius: 12px;
+  box-shadow: inset 0 -6px 0 rgba(0, 0, 0, 0.35);
+}
+
+.plate {
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 290px;
+  height: 16px;
+  background: radial-gradient(ellipse at center, #fff 0%, #e8e4f0 100%);
+  border-radius: 50%;
+  box-shadow: 0 8px 20px rgba(30, 27, 46, 0.12);
+}
+
+.candle-counter {
+  margin: 14px 0 0;
+  color: var(--ink-muted);
+  font-family: "Nunito", sans-serif;
+  font-weight: 700;
+  font-size: 0.78rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+#candlesLeft {
+  color: var(--accent);
+  font-weight: 800;
+  font-size: 1.45em;
+  letter-spacing: 0;
+  font-family: "Fredoka", sans-serif;
+}
+
+/* ───────── present stage ───────── */
+.present-card {
+  background: var(--surface);
+  border: none;
+  border-radius: 28px;
+  padding: 32px 22px 36px;
+  max-width: 620px;
+  width: 100%;
+  text-align: center;
+  box-shadow: var(--shadow-lift);
+}
+
+.present-intro {
+  font-family: "Fredoka", sans-serif;
+  font-weight: 600;
+  font-size: clamp(1.2rem, 3.5vw, 1.65rem);
+  line-height: 1.5;
+  color: var(--ink);
+  margin: 0 0 6px;
+}
+
+.present-intro__w {
+  display: inline-block;
+  margin: 0 0.1em 0.12em;
+  opacity: 0;
+  transform: translateY(12px) rotate(-1deg);
+}
+
+.stage--present.is-active .present-intro__w {
+  animation: word-rise 0.3s cubic-bezier(0.25, 0.9, 0.25, 1) forwards;
+}
+
+.stage--present.is-active .present-intro__w:nth-child(1) { animation-delay: 0.04s; }
+.stage--present.is-active .present-intro__w:nth-child(2) { animation-delay: 0.08s; }
+.stage--present.is-active .present-intro__w:nth-child(3) { animation-delay: 0.12s; }
+.stage--present.is-active .present-intro__w:nth-child(4) { animation-delay: 0.16s; }
+.stage--present.is-active .present-intro__w:nth-child(5) { animation-delay: 0.2s; }
+.stage--present.is-active .present-intro__w:nth-child(6) { animation-delay: 0.24s; }
+.stage--present.is-active .present-intro__w:nth-child(7) { animation-delay: 0.28s; }
+.stage--present.is-active .present-intro__w:nth-child(8) { animation-delay: 0.32s; }
+.stage--present.is-active .present-intro__w:nth-child(9) { animation-delay: 0.36s; }
+
+@keyframes word-rise {
+  to {
+    opacity: 1;
+    transform: translateY(0) rotate(0);
+  }
+}
+
+.present-intro__w--accent {
+  color: var(--accent-deep);
+  font-style: italic;
+}
+
+.stage--present.is-active .present-intro__w--heart {
+  animation: word-rise 0.3s cubic-bezier(0.25, 0.9, 0.25, 1) 0.32s forwards;
+  color: var(--accent);
+  font-style: italic;
+  font-weight: 700;
+}
+
+.present-stage {
+  margin-top: 22px;
+}
+
+.present-hit {
+  display: block;
+  width: 100%;
+  margin: 0;
+  padding: 10px 6px 2px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
+  text-align: center;
+}
+
+.present-hit:focus-visible {
+  outline: 3px solid var(--lilac);
+  outline-offset: 8px;
+  border-radius: 20px;
+}
+
+.present-stage.is-open .present-hit {
+  cursor: default;
+}
+
+.present-stage.is-open .present-hit:focus-visible {
+  outline: none;
+}
+
+.present-hint {
+  display: block;
+  position: relative;
+  font-family: "Nunito", sans-serif;
+  font-weight: 800;
+  font-size: 0.72rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink-muted);
+  margin: 0 auto 22px;
+  max-width: 300px;
+}
+
+.present-hint__ring {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: min(260px, 90vw);
+  height: 42px;
+  transform: translate(-50%, -50%);
+  border: 2px dashed rgba(232, 93, 117, 0.5);
+  border-radius: 999px;
+  pointer-events: none;
+}
+
+.present-box {
+  display: block;
+  width: 148px;
+  height: 104px;
+  margin: 0 auto;
+  position: relative;
+}
+
+.present-lid {
+  position: absolute;
+  top: 0;
+  left: -8px;
+  right: -8px;
+  height: 30px;
+  background: linear-gradient(180deg, #b8a9ff 0%, #8b7ce8 100%);
+  border: none;
+  border-radius: 10px 10px 4px 4px;
+  transform-origin: 50% 100%;
+  transition: transform 0.45s cubic-bezier(0.34, 1.12, 0.32, 1);
+  z-index: 4;
+  box-shadow: 0 4px 12px rgba(91, 79, 207, 0.25);
+}
+
+.present-bow {
+  position: absolute;
+  top: -6px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 30px;
+  height: 18px;
+  background: var(--accent);
+  border-radius: 50%;
+  z-index: 5;
+  border: none;
+}
+
+.present-body {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 72px;
+  background: linear-gradient(180deg, #fff 0%, #f3eeff 100%);
+  border: none;
+  border-radius: 0 0 12px 12px;
+  box-shadow: 0 8px 24px rgba(30, 27, 46, 0.1);
+  z-index: 1;
+}
+
+.present-ribbon {
+  position: absolute;
+  background: linear-gradient(180deg, var(--accent), var(--accent-deep));
+  z-index: 2;
+  border-radius: 2px;
+}
+
+.present-ribbon--v {
+  left: 50%;
+  bottom: 0;
+  width: 18px;
+  height: 72px;
+  transform: translateX(-50%);
+}
+
+.present-ribbon--h {
+  left: 8px;
+  right: 8px;
+  bottom: 26px;
+  height: 16px;
+}
+
+.present-stage.is-open .present-lid {
+  transform: translateY(-56px) rotate(-9deg);
+}
+
+.present-stage.is-open .present-bow {
+  transform: translateX(-50%) translateY(-56px) rotate(-5deg);
+  transition: transform 0.45s cubic-bezier(0.34, 1.12, 0.32, 1);
+}
+
+.present-stage.is-open .present-hint {
+  opacity: 0;
+  max-height: 0;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  transition: opacity 0.3s ease, max-height 0.35s ease;
+}
+
+.present-stage.is-open .present-hint__ring {
+  display: none;
+}
+
+.present-reveal {
+  display: none;
+  text-align: left;
+  padding-top: 6px;
+}
+
+.present-stage.is-open .present-reveal {
+  display: block;
+  animation: gift-reveal 0.45s ease forwards;
+}
+
+@keyframes gift-reveal {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.present-reveal__inner {
+  padding-top: 16px;
+}
+
+/* concrete gift */
+.concrete-card {
+  margin: 0 0 26px;
+  padding: 0;
+  border: none;
+}
+
+.concrete-frame {
+  background: linear-gradient(145deg, #fff 0%, #f0eef8 100%);
+  border: none;
+  border-radius: 20px;
+  padding: 16px 20px;
+  max-width: 240px;
+  margin: 0 auto 12px;
+  box-shadow: var(--shadow-soft);
+  opacity: 0;
+  transform: translateY(16px) scale(0.98);
+}
+
+.present-stage.is-open .concrete-frame {
+  animation: inner-pop 0.45s cubic-bezier(0.34, 1.15, 0.32, 1) 0.12s forwards;
+}
+
+.concrete-svg {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+@keyframes inner-pop {
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.concrete-cap {
+  font-family: "Nunito", sans-serif;
+  font-size: 0.88rem;
+  font-weight: 800;
+  color: var(--ink-soft);
+  line-height: 1.4;
+  max-width: 280px;
+  margin: 0 auto;
+  text-align: center;
+}
+
+.concrete-sub {
+  display: block;
+  margin-top: 4px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--accent-deep);
+  letter-spacing: 0.04em;
+}
+
+.present-reveal .letter.message {
+  margin: 0 auto;
+  max-width: 100%;
+  padding: 28px 24px 32px;
+  background: rgba(255, 255, 255, 0.55);
+  border-radius: 22px;
+  border: none;
+  box-shadow: var(--shadow-soft);
+  opacity: 0;
+  transform: translateY(12px);
+}
+
+.present-stage.is-open .letter.message {
+  animation: inner-pop 0.45s cubic-bezier(0.34, 1.1, 0.32, 1) 0.28s forwards;
+}
+
+.letter .whole {
+  color: var(--accent);
+  font-weight: 900;
+}
+
+.letter .paren {
+  font-style: italic;
+  color: #5a4fcf;
+  font-weight: 800;
+}
+
+.letter-punch {
+  font-weight: 800;
+  font-size: 1.05rem;
+  color: var(--accent-deep);
+  margin: 18px 0 12px !important;
+}
+
+.signoff--ruch {
+  text-align: right;
+  margin-top: 20px !important;
+}
+
+.ruch-deck {
+  display: block;
+  margin-top: 4px;
+  text-align: right;
+  font-style: italic;
+  font-size: 0.92rem;
+  line-height: 1.5;
+  color: var(--ink-soft);
+  opacity: 0;
+  transform: translateY(10px);
+}
+
+.present-stage.is-open .ruch-deck {
+  animation: inner-pop 0.45s cubic-bezier(0.34, 1.1, 0.32, 1) 0.55s forwards;
+}
+
+.signoff--ruch .ruch {
+  display: inline-block;
+  margin-top: 6px;
+  font-family: "Fredoka", sans-serif;
+  font-style: normal;
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: var(--accent);
+  letter-spacing: 0.02em;
+}
+
+/* shared message typography */
+.message {
+  font-family: "Nunito", sans-serif;
+  font-size: 1.02rem;
+  line-height: 1.65;
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.message-title {
+  font-family: "Fredoka", sans-serif;
+  font-weight: 600;
+  font-size: 1.85rem;
+  margin: 0 0 16px;
+  color: var(--accent-deep);
+}
+
+.message p {
+  margin: 0 0 14px;
+}
+
+.message p:first-of-type::first-letter {
+  font-family: "Fredoka", sans-serif;
+  font-weight: 700;
+  font-size: 2.8em;
+  float: left;
+  line-height: 0.9;
+  margin: 4px 10px 0 0;
+  color: var(--accent);
+}
+
+/* ───────── press A prompt (bottom center) ───────── */
+.press-a {
+  position: fixed;
+  left: 50%;
+  bottom: 22px;
+  transform: translateX(-50%);
+  z-index: 7;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px 10px 14px;
+  border: none;
+  border-radius: 999px;
+  background: rgba(30, 27, 46, 0.92);
+  color: #fff;
+  font-family: "Nunito", sans-serif;
+  font-weight: 700;
+  font-size: 0.82rem;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  box-shadow: 0 8px 22px rgba(30, 27, 46, 0.22);
+  opacity: 0;
+  animation: press-a-in 0.35s ease 0.9s forwards;
+  transition: background 0.15s ease;
+}
+
+@keyframes press-a-in {
+  to {
+    opacity: 1;
+  }
+}
+
+.press-a:hover {
+  background: rgba(30, 27, 46, 1);
+}
+
+.press-a__label {
+  opacity: 0.85;
+}
+
+.press-a__key {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 26px;
+  height: 26px;
+  padding: 0 6px;
+  background: #fff;
+  color: var(--ink);
+  border-radius: 6px;
+  font-family: "Fredoka", sans-serif;
+  font-weight: 700;
+  font-size: 0.95rem;
+  box-shadow: inset 0 -2px 0 rgba(0, 0, 0, 0.15);
+}
+
+.press-a__arrow {
+  margin-left: 2px;
+  font-weight: 800;
+  color: var(--accent);
+}
+
+.press-a.is-final {
+  cursor: default;
+  background: rgba(232, 93, 117, 0.92);
+}
+
+.press-a.is-final .press-a__key,
+.press-a.is-final .press-a__arrow {
+  display: none;
+}
+
+.press-a.is-hidden {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.18s ease;
+}
+
+/* ───────── footer ───────── */
+.footer {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  text-align: center;
+  padding: 6px 16px 8px;
+  color: var(--ink-muted);
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  font-family: "Nunito", sans-serif;
+  z-index: 4;
+  pointer-events: none;
+}
+
+.footer p {
+  display: inline-block;
+  margin: 0;
+  padding: 0;
+  background: transparent;
+}
+
+.confetti-overlay {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 5;
+  overflow: hidden;
+}
+
+/* ───────── responsive ───────── */
+@media (max-width: 720px) {
+  :root {
+    --vbar-w: 70px;
+  }
+  .vtoolbar {
+    left: 8px;
+    padding: 8px 6px;
+    border-radius: 18px;
+    gap: 6px;
+  }
+  .vtool {
+    width: 50px;
+    padding: 6px 2px;
+    border-radius: 12px;
+  }
+  .vtool__emoji {
+    font-size: 1.1rem;
+  }
+  .vtool__label {
+    font-size: 0.55rem;
+  }
+  .stage {
+    padding: 36px 20px 88px calc(var(--vbar-w) + 14px);
+  }
+  .cake-card,
+  .present-card {
+    padding: 24px 16px 22px;
+    border-radius: 22px;
+  }
+  .digit-candle {
+    width: 48px;
+    height: 84px;
+  }
+  .digit-number {
+    font-size: 2.05rem;
+  }
+  .candles--digits {
+    gap: 14px;
+    bottom: 178px;
+  }
+  .present-intro {
+    font-size: 1.1rem;
+  }
+  .present-reveal .letter.message {
+    padding: 22px 18px 26px;
+  }
+  .message p:first-of-type::first-letter {
+    font-size: 2.4em;
+  }
+  .press-a {
+    font-size: 0.74rem;
+    padding: 8px 12px 8px 10px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bounce,
+  .flame,
+  .title .name::after,
+  .title .line--happy .bounce,
+  .script-in,
+  .title .script .name,
+  .lede-line,
+  .lede-line.lede-c,
+  .eyebrow,
+  .cake-hint .unc,
+  .digit-candle,
+  .stage--present.is-active .present-intro__w,
+  .stage--present.is-active .present-intro__w--heart,
+  .present-hint__ring,
+  .present-bow,
+  .concrete-svg,
+  .concrete-sub,
+  .present-stage.is-open .concrete-frame,
+  .present-stage.is-open .letter.message,
+  .present-stage.is-open .ruch-deck,
+  .present-stage.is-open .present-reveal,
+  .press-a,
+  .press-a__key {
+    animation: none !important;
+  }
+
+  .bounce,
+  .title .line--happy .bounce,
+  .script-in,
+  .title .script .name,
+  .lede-line,
+  .stage--present.is-active .present-intro__w,
+  .concrete-frame,
+  .present-reveal .letter.message,
+  .present-stage.is-open .ruch-deck,
+  .stage {
+    opacity: 1;
+    transform: none;
+    filter: none;
+  }
+
+  .stage:not(.is-active) {
+    visibility: hidden;
+    pointer-events: none;
+  }
+}

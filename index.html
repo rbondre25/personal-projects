@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Happy 20th, Audrey</title>
+    <meta
+      name="description"
+      content="A silly physics birthday card for Audrey — turning 20."
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=Nunito:ital,wght@0,400;0,600;0,700;0,800;1,400;1,600&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body data-stage="hero">
+    <canvas id="physics" aria-hidden="true"></canvas>
+
+    <aside class="vtoolbar" role="toolbar" aria-label="Spawn things">
+      <button class="vtool" data-spawn="balloon" title="Balloon" aria-label="Balloon">
+        <span class="vtool__emoji">🎈</span>
+        <span class="vtool__label">balloon</span>
+      </button>
+      <button class="vtool" data-spawn="heart" title="Heart" aria-label="Heart">
+        <span class="vtool__emoji">💖</span>
+        <span class="vtool__label">heart</span>
+      </button>
+      <button class="vtool" data-spawn="star" title="Star" aria-label="Star">
+        <span class="vtool__emoji">⭐</span>
+        <span class="vtool__label">star</span>
+      </button>
+      <button class="vtool" data-spawn="gift" title="Gift" aria-label="Gift">
+        <span class="vtool__emoji">🎁</span>
+        <span class="vtool__label">gift</span>
+      </button>
+      <button class="vtool" data-spawn="cake" title="Cupcake" aria-label="Cupcake">
+        <span class="vtool__emoji">🧁</span>
+        <span class="vtool__label">cake</span>
+      </button>
+      <button class="vtool vtool--ghost" id="clearBtn" title="Clear" aria-label="Clear">
+        <span class="vtool__emoji">⌫</span>
+        <span class="vtool__label">clear</span>
+      </button>
+    </aside>
+
+    <main class="stages" id="stages">
+      <!-- ═══ STAGE 1: HERO ═══ -->
+      <section class="stage stage--hero is-active" id="stage-hero" data-stage="hero">
+        <div class="stage__inner">
+          <header class="hero">
+            <p class="eyebrow">official bday drop · v20.0 · no cap</p>
+            <h1 class="title" aria-label="Happy 20th Birthday Audrey">
+              <span class="line line--happy">
+                <span class="bounce" style="--i: 0">H</span><span class="bounce" style="--i: 1">a</span><span class="bounce" style="--i: 2">p</span><span class="bounce" style="--i: 3">p</span><span class="bounce" style="--i: 4">y</span>
+                <span class="title-gap" aria-hidden="true"></span>
+                <span class="bounce" style="--i: 5">2</span><span class="bounce" style="--i: 6">0</span><span class="bounce" style="--i: 7">t</span><span class="bounce" style="--i: 8">h</span>
+              </span>
+              <span class="line script">
+                <span class="script-in">Birthday,</span>
+                <span class="name">Audrey.</span>
+              </span>
+            </h1>
+            <p class="lede">
+              <span class="lede-line lede-a">Tap, drag, and throw .</span>
+              <span class="lede-line lede-b">
+                Balloons rise, hearts fall <em class="lede-em">(not ours tho!)</em> ,
+                everything bounces.
+              </span>
+              <span class="lede-line lede-c">
+                <span class="lede-tag">(YESSS physics!!</span><span class="lede-comma">,</span>
+                <span class="lede-tag lede-tag--eng">yes engineering!!!</span><span class="lede-comma">,</span>
+                Super cool right!)
+              </span>
+            </p>
+          </header>
+        </div>
+      </section>
+
+      <!-- ═══ STAGE 2: CAKE ═══ -->
+      <section class="stage stage--cake" id="stage-cake" data-stage="cake" aria-hidden="true">
+        <div class="stage__inner">
+          <div class="cake-card">
+            <h2>Make a wish, Auds.</h2>
+            <p class="cake-hint">
+              Click both candles to blow them out — that&rsquo;s twenty
+              <span class="unc">(UNC asf)</span>
+            </p>
+
+            <div class="cake-stage">
+              <div class="cake" id="cake" aria-label="Birthday cake with two digit candles">
+                <div class="candles candles--digits" id="candles">
+                  <button
+                    type="button"
+                    class="digit-candle"
+                    data-digit="2"
+                    aria-label="Candle two"
+                  >
+                    <span class="flame flame--big" aria-hidden="true"></span>
+                    <span class="digit-number">2</span>
+                  </button>
+                  <button
+                    type="button"
+                    class="digit-candle"
+                    data-digit="0"
+                    aria-label="Candle zero"
+                  >
+                    <span class="flame flame--big" aria-hidden="true"></span>
+                    <span class="digit-number">0</span>
+                  </button>
+                </div>
+                <div class="cake-top"></div>
+                <div class="cake-frosting"></div>
+                <div class="cake-mid"></div>
+                <div class="cake-bot"></div>
+                <div class="plate"></div>
+              </div>
+            </div>
+
+            <p class="candle-counter">
+              <span id="candlesLeft">2</span>&nbsp;&nbsp;candles remaining
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <!-- ═══ STAGE 3: PRESENT ═══ -->
+      <section class="stage stage--present" id="stage-present" data-stage="present" aria-hidden="true">
+        <div class="stage__inner">
+          <div class="present-card">
+            <p class="present-intro" aria-live="polite">
+              <span class="present-intro__w">Finally</span>
+              <span class="present-intro__w">here</span>
+              <span class="present-intro__w">is</span>
+              <span class="present-intro__w">you</span>
+              <span class="present-intro__w present-intro__w--accent">present,</span>
+              <span class="present-intro__w">I</span>
+              <span class="present-intro__w">hope</span>
+              <span class="present-intro__w">u</span>
+              <span class="present-intro__w present-intro__w--heart">love!!!</span>
+            </p>
+
+            <div class="present-stage" id="presentStage">
+              <button
+                type="button"
+                class="present-hit"
+                id="presentBtn"
+                aria-expanded="false"
+                aria-controls="presentReveal"
+              >
+                <span class="present-hint">
+                  <span class="present-hint__ring"></span>
+                  Tap to open the present
+                </span>
+                <span class="present-box" aria-hidden="true">
+                  <span class="present-lid"></span>
+                  <span class="present-bow"></span>
+                  <span class="present-body"></span>
+                  <span class="present-ribbon present-ribbon--v"></span>
+                  <span class="present-ribbon present-ribbon--h"></span>
+                </span>
+              </button>
+
+              <div class="present-reveal" id="presentReveal" aria-hidden="true">
+                <div class="present-reveal__inner">
+                  <figure class="concrete-card">
+                    <div class="concrete-frame">
+                      <svg
+                        class="concrete-svg"
+                        viewBox="0 0 200 200"
+                        xmlns="http://www.w3.org/2000/svg"
+                        aria-hidden="true"
+                      >
+                        <defs>
+                          <radialGradient id="gStair" cx="50%" cy="50%" r="55%">
+                            <stop offset="0%" stop-color="#bcbcbc" />
+                            <stop offset="100%" stop-color="#5e5e5e" />
+                          </radialGradient>
+                        </defs>
+                        <ellipse cx="100" cy="172" rx="80" ry="7" fill="#1e1b2e" opacity="0.18" />
+                        <circle cx="100" cy="100" r="82" fill="url(#gStair)" stroke="#3d3d3d" stroke-width="2" />
+                        <g stroke="#3d3d3d" stroke-width="1.1" stroke-linejoin="round" fill="#7a7a7a" fill-opacity="0.55">
+                          <path d="M 100 100 L 180 100 A 80 80 0 0 1 164.72 147.02 Z" />
+                          <path d="M 100 100 L 130.9 175.1 A 80 80 0 0 1 69.1 175.1 Z" />
+                          <path d="M 100 100 L 35.28 147.02 A 80 80 0 0 1 20 100 Z" />
+                          <path d="M 100 100 L 35.28 52.98 A 80 80 0 0 1 69.1 24.9 Z" />
+                          <path d="M 100 100 L 130.9 24.9 A 80 80 0 0 1 180 100 Z" />
+                        </g>
+                        <g stroke="#3d3d3d" stroke-width="1" opacity="0.5">
+                          <line x1="100" y1="100" x2="180" y2="100" />
+                          <line x1="100" y1="100" x2="164.72" y2="147.02" />
+                          <line x1="100" y1="100" x2="130.9" y2="175.1" />
+                          <line x1="100" y1="100" x2="69.1" y2="175.1" />
+                          <line x1="100" y1="100" x2="35.28" y2="147.02" />
+                          <line x1="100" y1="100" x2="20" y2="100" />
+                          <line x1="100" y1="100" x2="35.28" y2="52.98" />
+                          <line x1="100" y1="100" x2="69.1" y2="24.9" />
+                          <line x1="100" y1="100" x2="130.9" y2="24.9" />
+                          <line x1="100" y1="100" x2="164.72" y2="52.98" />
+                        </g>
+                        <path d="M 178 100 A 78 78 0 0 1 100 178" fill="none" stroke="#2e2e2e" stroke-width="2.5" opacity="0.55" />
+                        <circle cx="100" cy="100" r="22" fill="#4a4a4a" stroke="#3d3d3d" stroke-width="2" />
+                        <circle cx="100" cy="100" r="16" fill="#5c1a2e" stroke="#2a0a12" stroke-width="2" />
+                        <text
+                          x="100"
+                          y="106"
+                          text-anchor="middle"
+                          font-family="Fredoka, sans-serif"
+                          font-size="18"
+                          font-weight="700"
+                          fill="#fff9ee"
+                        >
+                          W
+                        </text>
+                      </svg>
+                    </div>
+                    <figcaption class="concrete-cap">
+                      concrete staircase <span class="concrete-sub">( W civil engineer )</span>
+                    </figcaption>
+                  </figure>
+
+                  <article class="letter message" aria-label="Letter from Ruch">
+                    <h2 class="message-title">Dear Audrey ,</h2>
+                    <p>
+                      Twenty <strong class="whole">WHOLE</strong> years of you in the world ….. what a
+                      lucky thing for the rest of us . Here&rsquo;s to stupid reels, terrible jokes
+                      <span class="paren">(yours)</span>, and every adventure still loading.
+                    </p>
+                    <p>
+                      I hope this year treats you like the main character you already are. Keep being
+                      you, keep building with concrete, and keep eating cake. Yum!
+                    </p>
+                    <p class="letter-punch">Jokes aside, I love u and happy birthday!</p>
+                    <p class="signoff signoff--ruch">
+                      &mdash; with love,<br /><br />
+                      <span class="ruch-deck">
+                        <span class="ruch-line"
+                          >ur only brown friend cause u said all the other ones are too loud</span
+                        ><br />
+                        <span class="ruch">(ruch)</span>
+                      </span>
+                    </p>
+                  </article>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <button
+      type="button"
+      class="press-a"
+      id="pressA"
+      aria-label="Press A to continue"
+    >
+      <span class="press-a__label">press</span>
+      <kbd class="press-a__key">A</kbd>
+      <span class="press-a__label" id="pressALabel">to keep going</span>
+      <span class="press-a__arrow" aria-hidden="true">→</span>
+    </button>
+
+    <footer class="footer">
+      <p>for audrey · 20 · built with questionable css discipline</p>
+    </footer>
+
+    <div class="confetti-overlay" id="confettiOverlay" aria-hidden="true"></div>
+
+    <script src="physics.js"></script>
+    <script src="present.js"></script>
+    <script src="stages.js"></script>
+  </body>
+</html>
