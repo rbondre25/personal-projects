@@ -159,17 +159,7 @@
             </p>
 
             <div class="present-stage" id="presentStage">
-              <button
-                type="button"
-                class="present-hit"
-                id="presentBtn"
-                aria-expanded="false"
-                aria-controls="presentReveal"
-              >
-                <span class="present-hint">
-                  <span class="present-hint__ring"></span>
-                  Tap to open the present
-                </span>
+              <div class="present-display" id="presentDisplay">
                 <span class="present-box" aria-hidden="true">
                   <span class="present-lid"></span>
                   <span class="present-bow"></span>
@@ -177,7 +167,7 @@
                   <span class="present-ribbon present-ribbon--v"></span>
                   <span class="present-ribbon present-ribbon--h"></span>
                 </span>
-              </button>
+              </div>
 
               <div class="present-reveal" id="presentReveal" aria-hidden="true">
                 <div class="present-reveal__inner">
@@ -265,10 +255,11 @@
           </div>
         </div>
         <nav class="stage__nav" aria-label="Continue">
-          <button type="button" class="press-a press-a--final" data-press-a aria-label="Press A to continue" aria-disabled="true">
+          <button type="button" class="press-a" data-press-a aria-label="Press A to open the present">
             <span class="press-a__label">press</span>
             <kbd class="press-a__key">A</kbd>
-            <span class="press-a__hint" data-press-hint>you made it ✿</span>
+            <span class="press-a__hint" data-press-hint>to open the present</span>
+            <span class="press-a__arrow" aria-hidden="true">→</span>
           </button>
         </nav>
       </section>

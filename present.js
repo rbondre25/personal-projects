@@ -2,21 +2,23 @@
   "use strict";
 
   const wrap = document.getElementById("presentStage");
-  const btn = document.getElementById("presentBtn");
+  const display = document.getElementById("presentDisplay");
   const reveal = document.getElementById("presentReveal");
-  if (!wrap || !btn || !reveal) return;
+  if (!wrap || !display || !reveal) return;
 
-  btn.addEventListener("click", () => {
-    if (wrap.classList.contains("is-open")) return;
+  window.openBirthdayPresent = function openBirthdayPresent() {
+    if (wrap.classList.contains("is-open")) return false;
+
     wrap.classList.add("is-open");
-    btn.setAttribute("aria-expanded", "true");
     reveal.setAttribute("aria-hidden", "false");
 
-    const r = btn.getBoundingClientRect();
+    const r = display.getBoundingClientRect();
     const cx = r.left + r.width / 2;
     const cy = r.top + r.height / 2;
     if (typeof window.__birthdayPresentBurst === "function") {
       window.__birthdayPresentBurst(cx, cy);
     }
-  });
+
+    return true;
+  };
 })();

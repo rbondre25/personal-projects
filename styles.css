@@ -785,56 +785,12 @@ body {
   margin-top: 22px;
 }
 
-.present-hit {
+.present-display {
   display: block;
   width: 100%;
   margin: 0;
   padding: 10px 6px 2px;
-  border: none;
-  background: transparent;
-  cursor: pointer;
-  font: inherit;
-  color: inherit;
   text-align: center;
-}
-
-.present-hit:focus-visible {
-  outline: 3px solid var(--lilac);
-  outline-offset: 8px;
-  border-radius: 20px;
-}
-
-.present-stage.is-open .present-hit {
-  cursor: default;
-}
-
-.present-stage.is-open .present-hit:focus-visible {
-  outline: none;
-}
-
-.present-hint {
-  display: block;
-  position: relative;
-  font-family: "Nunito", sans-serif;
-  font-weight: 800;
-  font-size: 0.72rem;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: var(--ink-muted);
-  margin: 0 auto 22px;
-  max-width: 300px;
-}
-
-.present-hint__ring {
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  width: min(260px, 90vw);
-  height: 42px;
-  transform: translate(-50%, -50%);
-  border: 2px dashed rgba(232, 93, 117, 0.5);
-  border-radius: 999px;
-  pointer-events: none;
 }
 
 .present-box {
@@ -915,19 +871,6 @@ body {
 .present-stage.is-open .present-bow {
   transform: translateX(-50%) translateY(-56px) rotate(-5deg);
   transition: transform 0.45s cubic-bezier(0.34, 1.12, 0.32, 1);
-}
-
-.present-stage.is-open .present-hint {
-  opacity: 0;
-  max-height: 0;
-  margin: 0;
-  padding: 0;
-  overflow: hidden;
-  transition: opacity 0.3s ease, max-height 0.35s ease;
-}
-
-.present-stage.is-open .present-hint__ring {
-  display: none;
 }
 
 .present-reveal {
@@ -1277,7 +1220,6 @@ body {
   .digit-candle,
   .stage--present.is-active .present-intro__w,
   .stage--present.is-active .present-intro__w--heart,
-  .present-hint__ring,
   .present-bow,
   .concrete-svg,
   .concrete-sub,

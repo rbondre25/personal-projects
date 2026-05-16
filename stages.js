@@ -13,7 +13,8 @@
   const PROMPT_LABELS = {
     hero: "to make a wish",
     cake: "to open your present",
-    present: "you made it ✿",
+    presentOpen: "to open the present",
+    presentDone: "you made it ✿",
   };
 
   /* what falls on each stage:
@@ -40,24 +41,39 @@
   let current = 0;
   let busy = false;
 
+  function isPresentOpen() {
+    const wrap = document.getElementById("presentStage");
+    return Boolean(wrap && wrap.classList.contains("is-open"));
+  }
+
   function setPrompt(stageId) {
     stageEls.forEach((el) => {
       const btn = el.querySelector("[data-press-a]");
       const hint = el.querySelector("[data-press-hint]");
+      const arrow = btn?.querySelector(".press-a__arrow");
       if (!btn || !hint) return;
 
       if (el.dataset.stage !== stageId) return;
 
       if (stageId === "present") {
-        btn.classList.add("is-final");
-        btn.setAttribute("aria-disabled", "true");
-        hint.textContent = PROMPT_LABELS.present;
+        if (isPresentOpen()) {
+          btn.classList.add("is-final");
+          btn.setAttribute("aria-disabled", "true");
+          hint.textContent = PROMPT_LABELS.presentDone;
+          if (arrow) arrow.hidden = true;
+        } else {
+          btn.classList.remove("is-final");
+          btn.removeAttribute("aria-disabled");
+          hint.textContent = PROMPT_LABELS.presentOpen;
+          if (arrow) arrow.hidden = false;
+        }
         return;
       }
 
       btn.classList.remove("is-final");
       btn.removeAttribute("aria-disabled");
       hint.textContent = PROMPT_LABELS[stageId];
+      if (arrow) arrow.hidden = false;
     });
   }
 
@@ -268,6 +284,21 @@
     });
   }
 
+  function handlePressA() {
+    if (busy) return;
+
+    if (STAGE_IDS[current] === "present") {
+      if (isPresentOpen()) return;
+      if (typeof window.openBirthdayPresent === "function") {
+        const opened = window.openBirthdayPresent();
+        if (opened) setPrompt("present");
+      }
+      return;
+    }
+
+    nextStage();
+  }
+
   function nextStage() {
     if (busy) return;
     if (current >= stageEls.length - 1) return;
@@ -293,7 +324,7 @@
       const tag = (e.target && e.target.tagName) || "";
       if (tag === "INPUT" || tag === "TEXTAREA") return;
       e.preventDefault();
-      nextStage();
+      handlePressA();
     }
   });
 
@@ -301,7 +332,7 @@
     btn.addEventListener("click", () => {
       if (btn.classList.contains("is-final")) return;
       if (btn.getAttribute("aria-disabled") === "true") return;
-      nextStage();
+      handlePressA();
     });
   });
 
