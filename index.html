@@ -77,6 +77,14 @@
             </p>
           </header>
         </div>
+        <nav class="stage__nav" aria-label="Continue">
+          <button type="button" class="press-a" data-press-a aria-label="Press A to continue">
+            <span class="press-a__label">press</span>
+            <kbd class="press-a__key">A</kbd>
+            <span class="press-a__hint" data-press-hint>to make a wish</span>
+            <span class="press-a__arrow" aria-hidden="true">→</span>
+          </button>
+        </nav>
       </section>
 
       <!-- ═══ STAGE 2: CAKE ═══ -->
@@ -124,6 +132,14 @@
             </p>
           </div>
         </div>
+        <nav class="stage__nav" aria-label="Continue">
+          <button type="button" class="press-a" data-press-a aria-label="Press A to continue">
+            <span class="press-a__label">press</span>
+            <kbd class="press-a__key">A</kbd>
+            <span class="press-a__hint" data-press-hint>to open your present</span>
+            <span class="press-a__arrow" aria-hidden="true">→</span>
+          </button>
+        </nav>
       </section>
 
       <!-- ═══ STAGE 3: PRESENT ═══ -->
@@ -248,20 +264,15 @@
             </div>
           </div>
         </div>
+        <nav class="stage__nav" aria-label="Continue">
+          <button type="button" class="press-a press-a--final" data-press-a aria-label="Press A to continue" aria-disabled="true">
+            <span class="press-a__label">press</span>
+            <kbd class="press-a__key">A</kbd>
+            <span class="press-a__hint" data-press-hint>you made it ✿</span>
+          </button>
+        </nav>
       </section>
     </main>
-
-    <button
-      type="button"
-      class="press-a"
-      id="pressA"
-      aria-label="Press A to continue"
-    >
-      <span class="press-a__label">press</span>
-      <kbd class="press-a__key">A</kbd>
-      <span class="press-a__label" id="pressALabel">to keep going</span>
-      <span class="press-a__arrow" aria-hidden="true">→</span>
-    </button>
 
     <footer class="footer">
       <p>for audrey · 20 · built with questionable css discipline</p>

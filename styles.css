@@ -211,6 +211,32 @@ body {
   pointer-events: auto;
 }
 
+.stage__nav {
+  position: absolute;
+  left: 50%;
+  bottom: 28px;
+  transform: translateX(-50%);
+  z-index: 4;
+  pointer-events: auto;
+}
+
+.stage:not(.is-active) .stage__nav {
+  visibility: hidden;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.stage.is-falling .stage__nav {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.18s ease;
+}
+
+.stage.is-active .press-a {
+  opacity: 0;
+  animation: press-a-in 0.35s ease 0.5s forwards;
+}
+
 /* ───────── hero ───────── */
 .hero {
   width: 100%;
@@ -1083,13 +1109,8 @@ body {
   color: var(--accent);
 }
 
-/* ───────── press A prompt (bottom center) ───────── */
+/* ───────── press A prompt (bottom of each stage) ───────── */
 .press-a {
-  position: fixed;
-  left: 50%;
-  bottom: 22px;
-  transform: translateX(-50%);
-  z-index: 7;
   display: inline-flex;
   align-items: center;
   gap: 8px;
@@ -1104,9 +1125,7 @@ body {
   letter-spacing: 0.04em;
   cursor: pointer;
   box-shadow: 0 8px 22px rgba(30, 27, 46, 0.22);
-  opacity: 0;
-  animation: press-a-in 0.35s ease 0.9s forwards;
-  transition: background 0.15s ease;
+  transition: background 0.15s ease, opacity 0.18s ease;
 }
 
 @keyframes press-a-in {
@@ -1119,7 +1138,8 @@ body {
   background: rgba(30, 27, 46, 1);
 }
 
-.press-a__label {
+.press-a__label,
+.press-a__hint {
   opacity: 0.85;
 }
 
@@ -1153,12 +1173,6 @@ body {
 .press-a.is-final .press-a__key,
 .press-a.is-final .press-a__arrow {
   display: none;
-}
-
-.press-a.is-hidden {
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 0.18s ease;
 }
 
 /* ───────── footer ───────── */
@@ -1271,9 +1285,13 @@ body {
   .present-stage.is-open .letter.message,
   .present-stage.is-open .ruch-deck,
   .present-stage.is-open .present-reveal,
-  .press-a,
+  .stage.is-active .press-a,
   .press-a__key {
     animation: none !important;
+  }
+
+  .stage.is-active .press-a {
+    opacity: 1;
   }
 
   .bounce,

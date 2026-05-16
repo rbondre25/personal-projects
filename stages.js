@@ -34,24 +34,31 @@
   };
 
   const stageEls = STAGE_IDS.map((id) => document.getElementById(`stage-${id}`));
-  const pressA = document.getElementById("pressA");
-  const pressALabel = document.getElementById("pressALabel");
+  const pressBtns = Array.from(document.querySelectorAll("[data-press-a]"));
   const body = document.body;
 
   let current = 0;
   let busy = false;
 
   function setPrompt(stageId) {
-    if (!pressA) return;
-    if (stageId === "present") {
-      pressA.classList.add("is-final");
-      pressA.setAttribute("aria-disabled", "true");
-      if (pressALabel) pressALabel.textContent = PROMPT_LABELS.present;
-      return;
-    }
-    pressA.classList.remove("is-final");
-    pressA.removeAttribute("aria-disabled");
-    if (pressALabel) pressALabel.textContent = PROMPT_LABELS[stageId];
+    stageEls.forEach((el) => {
+      const btn = el.querySelector("[data-press-a]");
+      const hint = el.querySelector("[data-press-hint]");
+      if (!btn || !hint) return;
+
+      if (el.dataset.stage !== stageId) return;
+
+      if (stageId === "present") {
+        btn.classList.add("is-final");
+        btn.setAttribute("aria-disabled", "true");
+        hint.textContent = PROMPT_LABELS.present;
+        return;
+      }
+
+      btn.classList.remove("is-final");
+      btn.removeAttribute("aria-disabled");
+      hint.textContent = PROMPT_LABELS[stageId];
+    });
   }
 
   function activate(idx) {
@@ -271,13 +278,11 @@
     const config = STAGE_FALL[curId] || { splitText: "", fallWhole: "" };
 
     cur.classList.add("is-falling");
-    if (pressA) pressA.classList.add("is-hidden");
 
     dropStage(cur, config).then(() => {
       cur.classList.remove("is-falling");
       current += 1;
       activate(current);
-      if (pressA) pressA.classList.remove("is-hidden");
       busy = false;
     });
   }
@@ -292,12 +297,13 @@
     }
   });
 
-  if (pressA) {
-    pressA.addEventListener("click", () => {
-      if (pressA.classList.contains("is-final")) return;
+  pressBtns.forEach((btn) => {
+    btn.addEventListener("click", () => {
+      if (btn.classList.contains("is-final")) return;
+      if (btn.getAttribute("aria-disabled") === "true") return;
       nextStage();
     });
-  }
+  });
 
   activate(0);
 })();
